@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canon-story-engine"
+version = "0.1.0"
+description = "Story Canon Engine & Story Management Microservices"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | \.idea
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".venv",
+    ".idea",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (imports sorting)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long (handled by black/formatter)
+    "B008", # do not perform function calls in argument defaults (needed for FastAPI Depends)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["lore_service", "story_service"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "services/lore_service:services/story_service"
+explicit_package_bases = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+exclude = [
+    "^.venv/",
+    "^build/",
+    "^dist/",
+]
+
+[[tool.mypy.overrides]]
+module = "networkx.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "services/lore_service/tests",
+    "services/story_service/tests",
+]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+pythonpath = [
+    ".",
+    "services/lore_service",
+    "services/story_service",
+]
+asyncio_mode = "auto"
