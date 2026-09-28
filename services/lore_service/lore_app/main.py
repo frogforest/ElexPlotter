@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from lore_app.api.v1.canon import router as canon_router
 from lore_app.api.v1.characters import router as characters_router
 from lore_app.api.v1.world_events import router as events_router
@@ -26,6 +27,14 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     openapi_url="/openapi.json",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Exception handler for RFC 7807 problem details

@@ -131,23 +131,35 @@ pytest -v
 
 ---
 
-## 🏃 Запуск микросервисов
+## 🏃 Запуск приложения и серверов
 
-### Запуск Lore Service (Сервис канона, порт 8001)
+### Вариант 1. Запуск в один клик (Серверы + Веб-интерфейс)
 
+Самый удобный способ: запускает **Lore Service**, **Story Service** и открывает веб-студию:
+
+```powershell
+python run_app.py
+```
+
+* **Веб-интерфейс приложения:** [http://127.0.0.1:3000](http://127.0.0.1:3000)
+* **Story Service:** [http://127.0.0.1:8002](http://127.0.0.1:8002) (Swagger: `/docs`)
+* **Lore Service:** [http://127.0.0.1:8001](http://127.0.0.1:8001) (Swagger: `/docs`)
+
+---
+
+### Вариант 2. Раздельный запуск микросервисов вручную
+
+#### Lore Service (Сервис канона, порт 8001)
 ```powershell
 $env:PYTHONPATH="services/lore_service"
 uvicorn lore_app.main:app --port 8001 --reload
 ```
-* **Swagger UI:** [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
 
-### Запуск Story Service (Сервис историй, порт 8000)
-
+#### Story Service (Сервис историй, порт 8002)
 ```powershell
 $env:PYTHONPATH="services/story_service"
-uvicorn story_app.main:app --port 8000 --reload
+uvicorn story_app.main:app --port 8002 --reload
 ```
-* **Swagger UI:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ---
 

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canon Story Studio — Движок Канона и Текстов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">✨</div>
+        <div class="brand-text">
+          <h2>Canon Studio</h2>
+          <span class="badge-status">Микросервисы онлайн</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-stories" id="btn-tab-stories">
+          <span class="icon">📖</span> Мои Тексты
+        </button>
+        <button class="nav-item" data-tab="tab-editor" id="btn-tab-editor">
+          <span class="icon">✍️</span> Новый Текст
+        </button>
+        <button class="nav-item" data-tab="tab-timeline" id="btn-tab-timeline">
+          <span class="icon">⏳</span> Граф и Таймлайн
+        </button>
+        <button class="nav-item" data-tab="tab-characters" id="btn-tab-characters">
+          <span class="icon">👤</span> Персонажи
+        </button>
+        <button class="nav-item" data-tab="tab-events" id="btn-tab-events">
+          <span class="icon">⚡</span> События Мира
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="service-pill" id="status-story">
+          <span class="dot online"></span> Story Service :8002
+        </div>
+        <div class="service-pill" id="status-lore">
+          <span class="dot online"></span> Lore Service :8001
+        </div>
+        <button class="btn-seed" id="btn-seed-data">Загрузить демо-мир</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1 id="page-title">Библиотека текстов</h1>
+          <p id="page-subtitle">Хронология и тексты с контролем причинно-следственных связей</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn-primary" id="btn-quick-new-story">+ Написать текст</button>
+        </div>
+      </header>
+
+      <!-- TAB 1: Stories Library -->
+      <section class="tab-pane active" id="tab-stories">
+        <div class="filter-bar">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="filter-search" placeholder="Поиск по названию или содержанию...">
+          </div>
+          <div class="select-wrap">
+            <select id="filter-character">
+              <option value="">Все персонажи</option>
+            </select>
+          </div>
+          <button class="btn-secondary" id="btn-refresh-stories">Обновить</button>
+        </div>
+
+        <div class="stories-grid" id="stories-grid">
+          <div class="empty-state">Загрузка историй...</div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Text Editor & Creator -->
+      <section class="tab-pane" id="tab-editor">
+        <div class="editor-layout">
+          <!-- Left: Story writing -->
+          <div class="editor-main">
+            <div class="form-group">
+              <label for="story-title">Название текста</label>
+              <input type="text" id="story-title" placeholder="например: Правда о Фальке или Вечер у костра...">
+            </div>
+
+            <div class="form-group">
+              <label for="story-summary">Краткая аннотация (для поиска и оглавления)</label>
+              <input type="text" id="story-summary" placeholder="Краткое описание момента...">
+            </div>
+
+            <div class="form-group flex-1">
+              <label for="story-content">Текст истории (.txt файл мира)</label>
+              <textarea id="story-content" placeholder="Напишите здесь сам текст сцены или диалога..."></textarea>
+            </div>
+          </div>
+
+          <!-- Right: Lore & Canon Connections -->
+          <div class="editor-sidebar">
+            <div class="canon-panel">
+              <h3>⚡ Привязка к канону</h3>
+              <p class="panel-hint">Система автоматически проверит логику предпосылок через Lore Service.</p>
+
+              <!-- Characters -->
+              <div class="meta-section">
+                <label>Участвующие персонажи</label>
+                <div class="chips-container" id="editor-characters-chips">
+                  <!-- Populated via JS -->
+                </div>
+              </div>
+
+              <!-- Prerequisite Events (REQUIRES) -->
+              <div class="meta-section">
+                <label>Обязательные предпосылки (REQUIRES)</label>
+                <span class="sub-hint">Что УЖЕ должно произойти к этому тексту:</span>
+                <div class="chips-container" id="editor-requires-chips">
+                  <!-- Populated via JS -->
+                </div>
+              </div>
+
+              <!-- Resulting Events (CREATES) -->
+              <div class="meta-section">
+                <label>События, создаваемые текстом (CREATES)</label>
+                <span class="sub-hint">Что меняется в мире после этого текста:</span>
+                <div class="chips-container" id="editor-creates-chips">
+                  <!-- Populated via JS -->
+                </div>
+              </div>
+
+              <!-- Live Consistency Check Warning Box -->
+              <div class="warning-box hidden" id="live-warning-box">
+                <div class="warning-header">
+                  <span class="warning-icon">⚠️</span>
+                  <strong>Предупреждение канона:</strong>
+                </div>
+                <ul id="warning-list"></ul>
+              </div>
+
+              <div class="editor-actions">
+                <button class="btn-secondary" id="btn-precheck-canon">Проверить канон</button>
+                <button class="btn-primary" id="btn-save-story">Сохранить текст</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Canon Timeline & Graph -->
+      <section class="tab-pane" id="tab-timeline">
+        <div class="timeline-container">
+          <div class="timeline-header">
+            <h2>Хронологический порядок событий канона</h2>
+            <p>Вычислен автоматически алгоритмом топологической сортировки DAG-графа зависимостей.</p>
+          </div>
+          <div class="timeline-track" id="timeline-track">
+            <!-- Timeline items populated via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Characters Management -->
+      <section class="tab-pane" id="tab-characters">
+        <div class="management-layout">
+          <div class="card-create">
+            <h3>Создать персонажа</h3>
+            <div class="form-group">
+              <label for="char-name">Имя персонажа</label>
+              <input type="text" id="char-name" placeholder="например: Фальк, Синда, Айзек...">
+            </div>
+            <div class="form-group">
+              <label for="char-type">Роль в мире</label>
+              <select id="char-type">
+                <option value="COMPANION">Спутник (COMPANION)</option>
+                <option value="NPC">NPC / Второстепенный (NPC)</option>
+                <option value="PROTAGONIST">Протагонист (PROTAGONIST)</option>
+                <option value="ANTAGONIST">Антагонист (ANTAGONIST)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="char-desc">Описание</label>
+              <textarea id="char-desc" rows="3" placeholder="Характер, особенности, происхождение..."></textarea>
+            </div>
+            <button class="btn-primary" id="btn-create-character">Добавить персонажа</button>
+          </div>
+
+          <div class="card-list">
+            <h3>Список персонажей мира</h3>
+            <div class="grid-cards" id="characters-list">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: Events & Dependencies Management -->
+      <section class="tab-pane" id="tab-events">
+        <div class="management-layout">
+          <div class="card-create">
+            <h3>Создать ключевое событие канона</h3>
+            <div class="form-group">
+              <label for="event-title">Название события</label>
+              <input type="text" id="event-title" placeholder="например: Фальк присоединился к отряду...">
+            </div>
+            <div class="form-group">
+              <label for="event-type">Тип события</label>
+              <select id="event-type">
+                <option value="COMPANION_JOIN">Присоединение спутника (COMPANION_JOIN)</option>
+                <option value="NPC_APPEAR">Появление NPC (NPC_APPEAR)</option>
+                <option value="RELATIONSHIP">Отношения (RELATIONSHIP)</option>
+                <option value="REVELATION">Раскрытие тайны (REVELATION)</option>
+                <option value="WORLD_STATE">Состояние мира / Война (WORLD_STATE)</option>
+                <option value="PLOT_MILESTONE">Сюжетный рубеж (PLOT_MILESTONE)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Обязательные предки (Событие зависит от них)</label>
+              <div class="chips-container" id="event-parents-chips">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+            <button class="btn-primary" id="btn-create-event">Зафиксировать событие</button>
+          </div>
+
+          <div class="card-list">
+            <h3>Существующие события и связи</h3>
+            <div class="grid-cards" id="events-list">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Story Reader Modal -->
+  <div class="modal-backdrop hidden" id="story-modal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-story-title">Заголовок текста</h2>
+          <span class="modal-meta" id="modal-story-meta">...</span>
+        </div>
+        <button class="btn-close" id="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-warnings hidden" id="modal-warnings"></div>
+        <div class="modal-text-content" id="modal-story-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

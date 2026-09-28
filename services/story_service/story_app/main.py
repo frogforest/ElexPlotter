@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from story_app.api.v1.stories import router as stories_router
 from story_app.core.config import settings
 from story_app.core.database import Base, engine
@@ -23,6 +24,14 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     openapi_url="/openapi.json",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Exception handler for RFC 7807 problem details
