@@ -19,6 +19,8 @@ class Story(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    primary_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

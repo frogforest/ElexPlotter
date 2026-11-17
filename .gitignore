@@ -60,3 +60,7 @@ $RECYCLE.BIN/
 storage/
 services/story_service/storage/*
 !services/story_service/storage/.gitkeep
+
+# Local archives and SQLite files
+*.zip
+*.sqlite

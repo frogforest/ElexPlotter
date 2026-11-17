@@ -3,39 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canon Story Studio — Движок Канона и Текстов</title>
+  <title>ELEX // StoryPlotter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=elex-2.0">
 </head>
 <body>
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-icon">✨</div>
+        <div class="brand-icon" aria-hidden="true"><span></span></div>
         <div class="brand-text">
-          <h2>Canon Studio</h2>
-          <span class="badge-status">Микросервисы онлайн</span>
+          <h2>ELEX / STORYPLOTTER</h2>
+          <span class="badge-status">СИСТЕМА АКТИВНА</span>
         </div>
       </div>
 
       <nav class="nav-menu">
         <button class="nav-item active" data-tab="tab-stories" id="btn-tab-stories">
-          <span class="icon">📖</span> Мои Тексты
+          <span class="icon"></span> Хроника Сюжета
         </button>
         <button class="nav-item" data-tab="tab-editor" id="btn-tab-editor">
-          <span class="icon">✍️</span> Новый Текст
-        </button>
-        <button class="nav-item" data-tab="tab-timeline" id="btn-tab-timeline">
-          <span class="icon">⏳</span> Граф и Таймлайн
-        </button>
-        <button class="nav-item" data-tab="tab-characters" id="btn-tab-characters">
-          <span class="icon">👤</span> Персонажи
+          <span class="icon"></span> Новый Текст
         </button>
         <button class="nav-item" data-tab="tab-events" id="btn-tab-events">
-          <span class="icon">⚡</span> События Мира
+          <span class="icon"></span> Вехи Канона
+        </button>
+        <button class="nav-item" data-tab="tab-characters" id="btn-tab-characters">
+          <span class="icon"></span> Персонажи
         </button>
       </nav>
 
@@ -55,20 +52,41 @@
       <!-- Header -->
       <header class="topbar">
         <div class="topbar-title">
-          <h1 id="page-title">Библиотека текстов</h1>
-          <p id="page-subtitle">Хронология и тексты с контролем причинно-следственных связей</p>
+          <h1 id="page-title">Хроника Канона и Текстов</h1>
         </div>
         <div class="topbar-actions">
+          <button class="btn-secondary" id="btn-quick-new-event">+ Новая веха канона</button>
           <button class="btn-primary" id="btn-quick-new-story">+ Написать текст</button>
         </div>
       </header>
 
-      <!-- TAB 1: Stories Library -->
+      <!-- TAB 1: Linear Chronicle & Story Tree (Google Docs Structure) -->
       <section class="tab-pane active" id="tab-stories">
+        <!-- Explanatory Banner -->
+        <div class="chronicle-intro-card">
+          <div class="intro-actions">
+            <div class="view-switch-group">
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
         <div class="filter-bar">
           <div class="search-input-wrap">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="filter-search" placeholder="Поиск по названию или содержанию...">
+            <input type="text" id="filter-search" placeholder="Поиск по названию текста, имени .txt или тексту в файле">
+          </div>
+          <div class="select-wrap">
+            <select id="filter-event-type">
+              <option value="">Все типы вех мира</option>
+              <option value="COMPANION_JOIN">Новый спутник</option>
+              <option value="NPC_APPEAR">Первое появление NPC</option>
+              <option value="RELATIONSHIP">Изменения в отношениях спутников</option>
+              <option value="WORLD_STATE">Глобальные события</option>
+              <option value="PLOT_MILESTONE">Сюжетный рубеж</option>
+              <option value="REVELATION">Раскрытие тайны</option>
+              <option value="CHARACTER_BACKSTORY">Прошлое персонажей</option>
+                        <option value="CHARACTER_DEATH">️Гибель персонажа</option>
+            </select>
           </div>
           <div class="select-wrap">
             <select id="filter-character">
@@ -78,91 +96,196 @@
           <button class="btn-secondary" id="btn-refresh-stories">Обновить</button>
         </div>
 
-        <div class="stories-grid" id="stories-grid">
-          <div class="empty-state">Загрузка историй...</div>
+        <!-- 1. Primary View: Hierarchical Chronicle Tree -->
+        <div class="chronicle-tree" id="chronicle-tree">
+          <div class="empty-state">Загрузка хроники канона...</div>
+        </div>
+
+        <!-- 2. Alternative View: Flat Stories Grid -->
+        <div class="stories-grid hidden" id="stories-grid">
+          <div class="empty-state">Загрузка текстов...</div>
         </div>
       </section>
 
       <!-- TAB 2: Text Editor & Creator -->
       <section class="tab-pane" id="tab-editor">
+        <!-- Edit Mode Banner -->
+        <div id="editor-mode-banner" class="editor-mode-banner hidden">
+          <div class="banner-text">
+            <span>Редактирование текста: <strong id="editor-editing-title">...</strong></span>
+            <span class="sub-hint" style="color:var(--text-dim); margin-left: 8px;">(Изменения обновят файл .txt и привязку к вехе)</span>
+          </div>
+          <button class="btn-secondary btn-sm" id="btn-cancel-story-edit"> Отмена (создать новый текст)</button>
+        </div>
+
         <div class="editor-layout">
           <!-- Left: Story writing -->
           <div class="editor-main">
+            <input type="hidden" id="editing-story-id" value="">
             <div class="form-group">
-              <label for="story-title">Название текста</label>
-              <input type="text" id="story-title" placeholder="например: Правда о Фальке или Вечер у костра...">
+              <label for="story-title">Название текста (определяет имя .txt файла)</label>
+              <input type="text" id="story-title" placeholder="например: Шоколадная рыбалка...">
             </div>
 
             <div class="form-group">
-              <label for="story-summary">Краткая аннотация (для поиска и оглавления)</label>
-              <input type="text" id="story-summary" placeholder="Краткое описание момента...">
+              <label for="story-summary">Краткая аннотация (для оглавления и контекста)</label>
+              <input type="text" id="story-summary" placeholder="Краткое описание момента, диалога или сцены...">
             </div>
 
             <div class="form-group flex-1">
               <label for="story-content">Текст истории (.txt файл мира)</label>
-              <textarea id="story-content" placeholder="Напишите здесь сам текст сцены или диалога..."></textarea>
+              <textarea id="story-content" placeholder="Напишите здесь текст сцены, диалога или главы..."></textarea>
             </div>
           </div>
 
           <!-- Right: Lore & Canon Connections -->
           <div class="editor-sidebar">
             <div class="canon-panel">
-              <h3>⚡ Привязка к канону</h3>
-              <p class="panel-hint">Система автоматически проверит логику предпосылок через Lore Service.</p>
+              <h3> Привязка к линейному канону</h3>
+              <p class="panel-hint">Выберите период сюжета. Сервер проверит, присутствуют ли уже указанные персонажи в лагере и нет ли логических противоречий.</p>
 
-              <!-- Characters -->
+              <!-- Primary Milestone (Timeline Placement) -->
+              <div class="meta-section">
+                <label for="story-milestone">К какому периоду сюжета относится текст?</label>
+                <div class="select-wrap" style="width: 100%;">
+                  <select id="story-milestone" style="width: 100%;">
+                    <option value="">-- Выберите ключевую веху (Период сюжета) --</option>
+                  </select>
+                </div>
+                <span class="sub-hint">Определяет, какие события УЖЕ произошли к моменту этой сцены.</span>
+              </div>
+
+              <!-- Participating Characters -->
               <div class="meta-section">
                 <label>Участвующие персонажи</label>
+                <span class="sub-hint">Кто действует в этом тексте:</span>
                 <div class="chips-container" id="editor-characters-chips">
                   <!-- Populated via JS -->
                 </div>
               </div>
 
-              <!-- Prerequisite Events (REQUIRES) -->
+              <!-- Optional: Text creates / establishes a milestone -->
               <div class="meta-section">
-                <label>Обязательные предпосылки (REQUIRES)</label>
-                <span class="sub-hint">Что УЖЕ должно произойти к этому тексту:</span>
-                <div class="chips-container" id="editor-requires-chips">
-                  <!-- Populated via JS -->
-                </div>
-              </div>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="check-creates-milestone">
+                  <span> Этот текст устанавливает ключевое событие канона (первоисточник вехи)</span>
+                </label>
+                <div id="new-milestone-fields" class="sub-fields hidden">
+                  <span class="sub-hint" style="margin-bottom: 12px; display: block; color: var(--text-dim);">
+                    Этот текст станет сценой-первоисточником (как до этого дошло).
+                  </span>
 
-              <!-- Resulting Events (CREATES) -->
-              <div class="meta-section">
-                <label>События, создаваемые текстом (CREATES)</label>
-                <span class="sub-hint">Что меняется в мире после этого текста:</span>
-                <div class="chips-container" id="editor-creates-chips">
-                  <!-- Populated via JS -->
+                  <div class="radio-choice-group" style="margin-bottom: 12px;">
+                    <label class="radio-label">
+                      <input type="radio" name="milestone-origin-mode" id="mode-create-new-milestone" value="new" checked>
+                      <span>Создать новую веху мира под эту сцену</span>
+                    </label>
+                    <label class="radio-label">
+                      <input type="radio" name="milestone-origin-mode" id="mode-link-existing-milestone" value="existing">
+                      <input type="radio" name="milestone-origin-mode" id="mode-link-existing-milestone" value="existing">
+                      <span>Назначить для существующей вехи</span>
+                    </label>
+                  </div>
+
+                  <!-- Option 1: Create New Milestone -->
+                  <div id="box-create-new-milestone">
+                    <div class="form-group" style="margin-top: 8px;">
+                      <label for="new-milestone-title">Название новой вехи мира</label>
+                      <input type="text" id="new-milestone-title" placeholder="например: Окончание войны">
+                    </div>
+                    <div class="form-group">
+                      <label for="new-milestone-type">Категория новой вехи</label>
+                      <select id="new-milestone-type">
+                        <option value="COMPANION_JOIN">Присоединение спутника к отряду</option>
+                        <option value="NPC_APPEAR">Появление нового NPC</option>
+                        <option value="RELATIONSHIP">️Отношения спутников</option>
+                        <option value="CHARACTER_BACKSTORY">Прошлое персонажей</option>
+                        <option value="CHARACTER_DEATH">️Гибель персонажа</option>
+                        <option value="WORLD_STATE">️Глобальные события мира</option>
+                        <option value="REVELATION">Раскрытие ранее неизвестного факта / тайны</option>
+                        <option value="PLOT_MILESTONE">Сюжетный рубеж</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Option 2: Link Existing Milestone -->
+                  <div id="box-link-existing-milestone" class="hidden">
+                    <div class="form-group" style="margin-top: 8px;">
+                      <label for="select-established-milestone">Выберите существующую веху, которую порождает этот текст:</label>
+                      <select id="select-established-milestone">
+                        <option value="">-- Выберите веху канона --</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <!-- Live Consistency Check Warning Box -->
               <div class="warning-box hidden" id="live-warning-box">
                 <div class="warning-header">
-                  <span class="warning-icon">⚠️</span>
-                  <strong>Предупреждение канона:</strong>
+                  <span class="warning-icon" id="warning-icon"></span>
+                  <strong id="warning-title">Контроль логики канона:</strong>
                 </div>
                 <ul id="warning-list"></ul>
               </div>
 
               <div class="editor-actions">
                 <button class="btn-secondary" id="btn-precheck-canon">Проверить канон</button>
-                <button class="btn-primary" id="btn-save-story">Сохранить текст</button>
+                <button class="btn-primary" id="btn-save-story">Сохранить текст (.txt)</button>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- TAB 3: Canon Timeline & Graph -->
-      <section class="tab-pane" id="tab-timeline">
-        <div class="timeline-container">
-          <div class="timeline-header">
-            <h2>Хронологический порядок событий канона</h2>
-            <p>Вычислен автоматически алгоритмом топологической сортировки DAG-графа зависимостей.</p>
+      <!-- TAB 3: Canon Events & Sequential Order -->
+      <section class="tab-pane" id="tab-events">
+        <div class="management-layout">
+          <div class="card-create">
+            <h3>Создать ключевую веху канона</h3>
+            <p class="panel-hint">Ключевые поворотные точки сюжета, которые меняют мир и определяют контекст текстов.</p>
+            <div class="form-group">
+              <label for="event-title">Название вехи мира</label>
+              <input type="text" id="event-title" placeholder="например: Фальк присоединился к отряду...">
+            </div>
+            <div class="form-group">
+              <label for="event-type">Категория события</label>
+              <select id="event-type">
+                <option value="CHARACTER_BACKSTORY">Прошлое персонажей</option>
+                <option value="CHARACTER_DEATH">️ Гибель персонажа</option>
+                <option value="NPC_APPEAR">Появление в истории нового перонажа</option>
+                <option value="COMPANION_JOIN">Присоединение нового спутника к отряду</option>
+                <option value="RELATIONSHIP">Изменение в отношениях спутников</option>
+                <option value="WORLD_STATE">Глобальные события мира</option>
+                <option value="PLOT_MILESTONE">Сюжетный рубеж</option>
+                <option value="REVELATION">Раскрытие тайны (что-то важное о персонажах стало известно)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Участвующие персонажи</label>
+              <div class="chips-container" id="event-chars-chips">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Обязательные предки (Если зависит от предыдущей вехи)</label>
+              <div class="chips-container" id="event-parents-chips">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+            <button class="btn-primary" id="btn-create-event">Зафиксировать веху</button>
           </div>
-          <div class="timeline-track" id="timeline-track">
-            <!-- Timeline items populated via JS -->
+
+          <div class="card-list">
+            <div class="list-header-group">
+              <div>
+                <h3>Линейная последовательность ключевых вех</h3>
+                <p class="panel-hint">Используйте кнопки ▲ и ▼ для перемещения вех. Система автоматически сохраняет последовательность и проверяет отсутствие противоречий.</p>
+              </div>
+            </div>
+            <div class="grid-cards" id="events-list">
+              <!-- Populated via JS -->
+            </div>
           </div>
         </div>
       </section>
@@ -172,74 +295,35 @@
         <div class="management-layout">
           <div class="card-create">
             <h3>Создать персонажа</h3>
+            <p class="panel-hint">Спутники отряда (~10 основных) или второстепенные NPC мира (~40).</p>
             <div class="form-group">
               <label for="char-name">Имя персонажа</label>
-              <input type="text" id="char-name" placeholder="например: Фальк, Синда, Айзек...">
+              <input type="text" id="char-name" placeholder="Айк, Логан, Ллойд...">
             </div>
             <div class="form-group">
               <label for="char-type">Роль в мире</label>
               <select id="char-type">
-                <option value="COMPANION">Спутник (COMPANION)</option>
-                <option value="NPC">NPC / Второстепенный (NPC)</option>
+                <option value="COMPANION">Спутник отряда (COMPANION)</option>
+                <option value="NPC">Второстепенный NPC (NPC)</option>
                 <option value="PROTAGONIST">Протагонист (PROTAGONIST)</option>
                 <option value="ANTAGONIST">Антагонист (ANTAGONIST)</option>
               </select>
             </div>
             <div class="form-group">
               <label for="char-desc">Описание</label>
-              <textarea id="char-desc" rows="3" placeholder="Характер, особенности, происхождение..."></textarea>
+              <textarea id="char-desc" rows="3" placeholder="Погоняла, характер, роль в лагере. Опционально"></textarea>
             </div>
             <button class="btn-primary" id="btn-create-character">Добавить персонажа</button>
           </div>
 
           <div class="card-list">
-            <h3>Список персонажей мира</h3>
+            <h3>Персонажи мира</h3>
             <div class="grid-cards" id="characters-list">
               <!-- Populated via JS -->
             </div>
           </div>
         </div>
       </section>
-
-      <!-- TAB 5: Events & Dependencies Management -->
-      <section class="tab-pane" id="tab-events">
-        <div class="management-layout">
-          <div class="card-create">
-            <h3>Создать ключевое событие канона</h3>
-            <div class="form-group">
-              <label for="event-title">Название события</label>
-              <input type="text" id="event-title" placeholder="например: Фальк присоединился к отряду...">
-            </div>
-            <div class="form-group">
-              <label for="event-type">Тип события</label>
-              <select id="event-type">
-                <option value="COMPANION_JOIN">Присоединение спутника (COMPANION_JOIN)</option>
-                <option value="NPC_APPEAR">Появление NPC (NPC_APPEAR)</option>
-                <option value="RELATIONSHIP">Отношения (RELATIONSHIP)</option>
-                <option value="REVELATION">Раскрытие тайны (REVELATION)</option>
-                <option value="WORLD_STATE">Состояние мира / Война (WORLD_STATE)</option>
-                <option value="PLOT_MILESTONE">Сюжетный рубеж (PLOT_MILESTONE)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Обязательные предки (Событие зависит от них)</label>
-              <div class="chips-container" id="event-parents-chips">
-                <!-- Populated via JS -->
-              </div>
-            </div>
-            <button class="btn-primary" id="btn-create-event">Зафиксировать событие</button>
-          </div>
-
-          <div class="card-list">
-            <h3>Существующие события и связи</h3>
-            <div class="grid-cards" id="events-list">
-              <!-- Populated via JS -->
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
 
   <!-- Story Reader Modal -->
   <div class="modal-backdrop hidden" id="story-modal">
@@ -249,15 +333,67 @@
           <h2 id="modal-story-title">Заголовок текста</h2>
           <span class="modal-meta" id="modal-story-meta">...</span>
         </div>
-        <button class="btn-close" id="btn-close-modal">✕</button>
+        <button class="btn-close" id="btn-close-modal"></button>
       </div>
       <div class="modal-body">
         <div class="modal-warnings hidden" id="modal-warnings"></div>
+        <div class="modal-file-info">
+          <span class="modal-file-badge" id="modal-file-path"> storage/data/...</span>
+        </div>
         <div class="modal-text-content" id="modal-story-content"></div>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Milestone Edit Modal -->
+  <div class="modal-backdrop hidden" id="milestone-modal">
+    <div class="modal-window" style="width: 560px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-milestone-heading">Редактировать веху канона</h2>
+          <span class="modal-meta" id="modal-milestone-meta">Изменение параметров вехи мира</span>
+        </div>
+        <button class="btn-close" id="btn-close-milestone-modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-milestone-id">
+        <div class="form-group">
+          <label for="edit-milestone-title">Название вехи мира</label>
+          <input type="text" id="edit-milestone-title">
+        </div>
+        <div class="form-group">
+          <label for="edit-milestone-type">Категория события мира</label>
+          <select id="edit-milestone-type">
+            <option value="COMPANION_JOIN">Присоединение спутника к отряду</option>
+            <option value="NPC_APPEAR">Появление в истории нового персонажа</option>
+            <option value="RELATIONSHIP">Изменение в отношениях спутников</option>
+            <option value="CHARACTER_BACKSTORY">Прошлое персонажей</option>
+                <option value="CHARACTER_DEATH">️ Гибель персонажа</option>
+            <option value="WORLD_STATE">Глобальные события мира</option>
+            <option value="PLOT_MILESTONE">Сюжетный рубеж</option>
+            <option value="REVELATION">Раскрытие тайны</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-milestone-desc">Описание</label>
+          <textarea id="edit-milestone-desc" rows="3" placeholder="Что происходит в мире в этот момент..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Участвующие персонажи</label>
+          <div class="chips-container" id="edit-milestone-chars-chips"></div>
+        </div>
+        <div class="form-group">
+          <label>Обязательные предки (Если зависит от предыдущей вехи)</label>
+          <div class="chips-container" id="edit-milestone-parents-chips"></div>
+        </div>
+        <div class="editor-actions" style="margin-top:24px;">
+          <button class="btn-secondary" id="btn-cancel-milestone-edit">Отмена</button>
+          <button class="btn-primary" id="btn-save-milestone-edit">Сохранить изменения</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=1.3"></script>
 </body>
 </html>

@@ -1,11 +1,12 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
 import lore_app.core.database as lore_db
 import lore_app.models.entities  # noqa: F401 - ensures tables registered with Base.metadata
 import pytest
 import story_app.core.database as story_db
 import story_app.models.entities  # noqa: F401 - ensures tables registered with Base.metadata
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from lore_app.main import app as lore_fastapi_app
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -60,6 +61,17 @@ async def setup_databases() -> AsyncGenerator[None, None]:
         await conn.run_sync(story_db.Base.metadata.drop_all)
 
 
+def api_body(response: Response) -> Any:
+    """Return the raw ENSI response document."""
+    return response.json()
+
+
+def api_data(response: Response) -> Any:
+    """Return the payload inside the ENSI data envelope."""
+    body = api_body(response)
+    return body.get("data") if isinstance(body, dict) and "data" in body else body
+
+
 class DirectLoreServiceClient(LoreServiceClient):
     """Client for testing that sends requests to lore_fastapi_app directly via httpx."""
 
@@ -74,14 +86,14 @@ class DirectLoreServiceClient(LoreServiceClient):
         character_ids: list[int],
     ) -> dict:
         res = await self._client.post(
-            "/api/v1/consistency/check",
+            "/api/v1/canon:check-consistency",
             json={
                 "requires": requires,
                 "creates": creates,
                 "participating_character_ids": character_ids,
             },
         )
-        return dict(res.json())
+        return dict(api_data(res))
 
 
 async def test_end_to_end_microservices_workflow() -> None:
@@ -123,52 +135,51 @@ async def test_end_to_end_microservices_workflow() -> None:
             story_fastapi_app.dependency_overrides[story_db.get_db] = override_story_db
 
             # 1. Setup characters
-            falk = (
-                await lore_client.post(
-                    "/api/v1/characters", json={"name": "Falk", "type": "COMPANION"}
-                )
-            ).json()
-            konrad = (
-                await lore_client.post("/api/v1/characters", json={"name": "Konrad", "type": "NPC"})
-            ).json()
+            falk_res = await lore_client.post(
+                "/api/v1/characters", json={"name": "Falk", "type": "COMPANION"}
+            )
+            falk = api_data(falk_res)
+            konrad_res = await lore_client.post(
+                "/api/v1/characters", json={"name": "Konrad", "type": "NPC"}
+            )
+            konrad = api_data(konrad_res)
 
             # 2. Setup events
-            ev1 = (
-                await lore_client.post(
-                    "/api/v1/world-events",
-                    json={
-                        "title": "Falk joins camp",
-                        "type": "COMPANION_JOIN",
-                        "participants": [{"character_id": falk["id"]}],
-                    },
-                )
-            ).json()
+            ev1_res = await lore_client.post(
+                "/api/v1/world-events",
+                json={
+                    "title": "Falk joins camp",
+                    "type": "COMPANION_JOIN",
+                    "participants": [{"character_id": falk["id"]}],
+                },
+            )
+            ev1 = api_data(ev1_res)
 
-            ev2 = (
-                await lore_client.post(
-                    "/api/v1/world-events",
-                    json={
-                        "title": "Konrad appeared",
-                        "type": "NPC_APPEAR",
-                        "participants": [{"character_id": konrad["id"]}],
-                    },
-                )
-            ).json()
+            ev2_res = await lore_client.post(
+                "/api/v1/world-events",
+                json={
+                    "title": "Konrad appeared",
+                    "type": "NPC_APPEAR",
+                    "participants": [{"character_id": konrad["id"]}],
+                },
+            )
 
-            ev3 = (
-                await lore_client.post(
-                    "/api/v1/world-events",
-                    json={
-                        "title": "Falk origin revealed",
-                        "type": "REVELATION",
-                        "parent_ids": [ev1["id"], ev2["id"]],
-                        "participants": [
-                            {"character_id": falk["id"]},
-                            {"character_id": konrad["id"]},
-                        ],
-                    },
-                )
-            ).json()
+            ev2 = api_data(ev2_res)
+
+            ev3_res = await lore_client.post(
+                "/api/v1/world-events",
+                json={
+                    "title": "Falk origin revealed",
+                    "type": "REVELATION",
+                    "parent_ids": [ev1["id"], ev2["id"]],
+                    "participants": [
+                        {"character_id": falk["id"]},
+                        {"character_id": konrad["id"]},
+                    ],
+                },
+            )
+
+            ev3 = api_data(ev3_res)
 
             # 3. Add story with missing prerequisite
             story_res_invalid = await story_client.post(
@@ -182,8 +193,8 @@ async def test_end_to_end_microservices_workflow() -> None:
                     ],
                 },
             )
-            assert story_res_invalid.status_code == 201
-            invalid_story = story_res_invalid.json()
+            assert story_res_invalid.status_code == 200
+            invalid_story = api_data(story_res_invalid)
             assert len(invalid_story["warnings"]) > 0
             codes = [w["code"] for w in invalid_story["warnings"]]
             assert "MISSING_PREREQUISITES" in codes
@@ -203,8 +214,8 @@ async def test_end_to_end_microservices_workflow() -> None:
                     ],
                 },
             )
-            assert story_res_valid.status_code == 201
-            valid_story = story_res_valid.json()
+            assert story_res_valid.status_code == 200
+            valid_story = api_data(story_res_valid)
             assert len(valid_story["warnings"]) == 0
             assert valid_story["title"] == "Truth about Falk"
         finally:

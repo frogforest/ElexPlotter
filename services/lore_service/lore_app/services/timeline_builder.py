@@ -1,4 +1,4 @@
-from lore_app.models.entities import EventDependency, WorldEvent
+from lore_app.models.entities import EventDependency, EventParticipant, WorldEvent
 from lore_app.services.graph_manager import DependencyGraphManager
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +14,7 @@ class TimelineBuilder:
     async def get_chronological_events(self) -> list[WorldEvent]:
         events_res = await self.session.execute(
             select(WorldEvent).options(
-                selectinload(WorldEvent.participants),
+                selectinload(WorldEvent.participants).selectinload(EventParticipant.character),
                 selectinload(WorldEvent.parent_edges),
                 selectinload(WorldEvent.child_edges),
             )
@@ -27,5 +27,6 @@ class TimelineBuilder:
         graph_mgr = DependencyGraphManager()
         graph_mgr.build_from_dependencies(list(all_events.keys()), all_deps)
 
-        ordered_ids = graph_mgr.topological_sort()
+        sort_keys = {eid: ev.sort_order for eid, ev in all_events.items()}
+        ordered_ids = graph_mgr.topological_sort(sort_keys=sort_keys)
         return [all_events[eid] for eid in ordered_ids if eid in all_events]

@@ -61,14 +61,40 @@ class DependencyGraphManager:
             return set()
         return set(nx.descendants(self._graph, event_id))
 
-    def topological_sort(self, subset_event_ids: list[int] | None = None) -> list[int]:
+    def topological_sort(
+        self,
+        subset_event_ids: list[int] | None = None,
+        sort_keys: dict[int, int] | None = None,
+    ) -> list[int]:
         """
         Returns topologically sorted event IDs.
-        If subset_event_ids is provided, sorts only the subgraph induced by those IDs.
+        If sort_keys is provided ({event_id: sort_order}), nodes at the same topological level
+        are ordered according to their sort_order preference.
         """
         target_graph = self._graph
         if subset_event_ids is not None:
             valid_ids = [eid for eid in subset_event_ids if self._graph.has_node(eid)]
             target_graph = self._graph.subgraph(valid_ids)
 
-        return list(nx.topological_sort(target_graph))
+        if not sort_keys:
+            return list(nx.topological_sort(target_graph))
+
+        # Kahn's algorithm with priority ordering by sort_keys
+        in_degree = dict(target_graph.in_degree())
+        zero_in_degree = [node for node, deg in in_degree.items() if deg == 0]
+        zero_in_degree.sort(key=lambda n: sort_keys.get(n, 0))
+
+        result: list[int] = []
+        while zero_in_degree:
+            node = zero_in_degree.pop(0)
+            result.append(node)
+            new_zeros: list[int] = []
+            for neighbor in target_graph.successors(node):
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    new_zeros.append(neighbor)
+            new_zeros.sort(key=lambda n: sort_keys.get(n, 0))
+            zero_in_degree.extend(new_zeros)
+            zero_in_degree.sort(key=lambda n: sort_keys.get(n, 0))
+
+        return result

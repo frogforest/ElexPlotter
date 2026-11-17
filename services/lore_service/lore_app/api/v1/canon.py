@@ -13,7 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(tags=["Canon Engine"])
 
 
-@router.post("/consistency/check", response_model=ConsistencyCheckResponse)
+@router.post(
+    "/canon:check-consistency",
+    response_model=ConsistencyCheckResponse,
+    operation_id="check_canon_consistency",
+)
 async def check_consistency(
     payload: ConsistencyCheckRequest, db: AsyncSession = Depends(get_db)
 ) -> ConsistencyCheckResponse:

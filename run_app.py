@@ -6,11 +6,14 @@ import webbrowser
 
 import uvicorn
 
+# Ensure microservice directories are registered in sys.path
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_BASE_DIR, "services", "lore_service"))
+sys.path.insert(0, os.path.join(_BASE_DIR, "services", "story_service"))
+
 
 def run_lore_service() -> None:
     """Runs Lore Service (FastAPI) on port 8001."""
-    # Ensure lore_service directory is in pythonpath
-    sys.path.insert(0, os.path.abspath("services/lore_service"))
     from lore_app.main import app as lore_app
 
     uvicorn.run(lore_app, host="127.0.0.1", port=8001, log_level="warning")
@@ -18,7 +21,6 @@ def run_lore_service() -> None:
 
 def run_story_service() -> None:
     """Runs Story Service (FastAPI) on port 8002."""
-    sys.path.insert(0, os.path.abspath("services/story_service"))
     from story_app.main import app as story_app
 
     uvicorn.run(story_app, host="127.0.0.1", port=8002, log_level="warning")
@@ -37,6 +39,12 @@ def run_ui_server() -> None:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             super().__init__(*args, directory=ui_dir, **kwargs)
 
+        def end_headers(self) -> None:
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            super().end_headers()
+
         def log_message(self, format: str, *args: Any) -> None:
             pass  # quiet mode
 
@@ -45,9 +53,39 @@ def run_ui_server() -> None:
         httpd.serve_forever()
 
 
+def free_ports(ports: list[int]) -> None:
+    """Frees specified ports if occupied by previous hanging instances."""
+    import subprocess
+
+    try:
+        output = subprocess.check_output("netstat -ano -p tcp", shell=True, text=True)
+        cur_pid = os.getpid()
+        killed: set[int] = set()
+        for line in output.splitlines():
+            if "LISTENING" in line:
+                for port in ports:
+                    if f":{port} " in line:
+                        parts = line.strip().split()
+                        try:
+                            pid = int(parts[-1])
+                            if pid and pid != cur_pid and pid not in killed:
+                                subprocess.run(
+                                    f"taskkill /F /PID {pid}", shell=True, capture_output=True
+                                )
+                                killed.add(pid)
+                        except Exception:
+                            pass
+        if killed:
+            time.sleep(0.5)
+    except Exception:
+        pass
+
+
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+
+    free_ports([8001, 8002, 3000])
 
     print("=" * 60)
     print("Запуск Canon Story Studio...")
@@ -66,10 +104,10 @@ def main() -> None:
     p_ui.start()
 
     time.sleep(1.5)
-    print("🌐 Открываю интерфейс в браузере...")
+    print("Открываю интерфейс в браузере...")
     webbrowser.open("http://127.0.0.1:3000")
 
-    print("\n[OK] Приложение запущено и готово к работе.")
+    print("\nПриложение запущено и готово к работе.")
     print("Нажмите Ctrl+C в терминале для остановки серверов.\n")
 
     try:

@@ -18,6 +18,12 @@ class CharacterCreate(CharacterBase):
     pass
 
 
+class CharacterUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    type: CharacterType | None = None
+    description: str | None = Field(default=None, max_length=500)
+
+
 class CharacterResponse(CharacterBase):
     id: int
     created_at: datetime
@@ -49,13 +55,41 @@ class WorldEventCreate(WorldEventBase):
     )
 
 
+class WorldEventUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    type: EventType | None = None
+    description: str | None = None
+    parent_ids: list[int] | None = None
+    participants: list[ParticipantInput] | None = None
+
+
 class WorldEventResponse(WorldEventBase):
     id: int
+    sort_order: int = 0
     created_at: datetime
     parent_ids: list[int] = Field(default_factory=list)
     child_ids: list[int] = Field(default_factory=list)
     participants: list[ParticipantResponse] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
+
+
+class EventReorderItem(BaseModel):
+    event_id: int
+    sort_order: int
+
+
+class ReorderEventsRequest(BaseModel):
+    items: list[EventReorderItem] = Field(
+        ...,
+        min_length=1,
+        description="List of event IDs with their updated sequence order",
+    )
+    confirmed_dependency_ids: list[int] = Field(
+        default_factory=list,
+        description=(
+            "IDs of dependencies explicitly confirmed for removal " "after receiving a warning"
+        ),
+    )
 
 
 class DependencyCreate(BaseModel):
@@ -101,11 +135,24 @@ class ConsistencyCheckResponse(BaseModel):
     )
 
 
+class SearchPagination(BaseModel):
+    offset: int = Field(default=0, ge=0)
+    limit: int = Field(default=10, ge=-1, le=1000)
+
+
+class SearchRequest(BaseModel):
+    filter: dict[str, object] = Field(default_factory=dict)
+    sort: list[str] = Field(default_factory=list)
+    include: list[str] = Field(default_factory=list)
+    pagination: SearchPagination = Field(default_factory=SearchPagination)
+
+
 # Pagination response wrapper in ENSI API Guide format
 class MetaPagination(BaseModel):
     current_page: int
     per_page: int
     total: int
+    offset: int | None = None
 
 
 class PaginatedResponse(BaseModel, Generic[T]):

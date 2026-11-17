@@ -1,4 +1,6 @@
+
 repos:
+  # Базовые проверки файлов
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
@@ -7,34 +9,41 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
+  # Форматирование Python-кода
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:
       - id: black
         language_version: python3.11
 
+  # Статический анализ Python-кода
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.8
     hooks:
       - id: ruff
         args: [--fix]
 
+  # Локальные проверки проекта
   - repo: local
     hooks:
+      # Проверка типов
       - id: mypy
         name: mypy (type check)
-        entry: d:/PythonProject/.venv/Scripts/mypy.exe
-        language: system
-        types: [python]
-        require_serial: true
-        args: [--config-file=pyproject.toml]
-
-  - repo: local
-    hooks:
-      - id: run-unit-tests
-        name: run unit tests (pytest)
-        entry: d:/PythonProject/.venv/Scripts/pytest.exe
+        entry: python -m mypy
         language: system
         types: [python]
         pass_filenames: false
+        always_run: true
+        args:
+          - --config-file=pyproject.toml
+          - services/lore_service
+          - services/story_service
+
+      # Запуск тестов перед отправкой изменений
+      - id: run-unit-tests
+        name: run unit tests (pytest)
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]

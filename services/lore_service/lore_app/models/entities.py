@@ -20,6 +20,8 @@ class EventType(str, enum.Enum):
     RELATIONSHIP = "RELATIONSHIP"
     WORLD_STATE = "WORLD_STATE"
     PLOT_MILESTONE = "PLOT_MILESTONE"
+    CHARACTER_BACKSTORY = "CHARACTER_BACKSTORY"
+    CHARACTER_DEATH = "CHARACTER_DEATH"
 
 
 class ParticipantRole(str, enum.Enum):
@@ -56,6 +58,7 @@ class WorldEvent(Base):
         Enum(EventType), default=EventType.PLOT_MILESTONE, nullable=False
     )
     description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

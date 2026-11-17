@@ -1,8 +1,9 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
 import pytest
 import story_app.models.entities  # noqa: F401
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 from story_app.core.database import Base, get_db
@@ -48,6 +49,17 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+def api_body(response: Response) -> Any:
+    """Return the raw ENSI response document."""
+    return response.json()
+
+
+def api_data(response: Response) -> Any:
+    """Return the payload inside the ENSI data envelope."""
+    body = api_body(response)
+    return body.get("data") if isinstance(body, dict) and "data" in body else body
+
+
 async def test_file_storage(tmp_path: pytest.TempPathFactory) -> None:
     storage = FileStorageManager(base_dir=str(tmp_path))
     content = "A night by the campfire with Falk and the camp."
@@ -72,8 +84,8 @@ async def test_create_and_fetch_story(client: AsyncClient) -> None:
         ],
     }
     create_res = await client.post("/api/v1/stories", json=payload)
-    assert create_res.status_code == 201
-    story = create_res.json()
+    assert create_res.status_code == 200
+    story = api_data(create_res)
     assert story["title"] == payload["title"]
     assert story["character_ids"] == [1, 2]
     story_id = story["id"]
@@ -81,7 +93,7 @@ async def test_create_and_fetch_story(client: AsyncClient) -> None:
     # Fetch detail
     detail_res = await client.get(f"/api/v1/stories/{story_id}")
     assert detail_res.status_code == 200
-    detail = detail_res.json()
+    detail = api_data(detail_res)
     assert detail["title"] == payload["title"]
     assert detail["content"] == payload["content"]
 
@@ -107,11 +119,80 @@ async def test_search_stories(client: AsyncClient) -> None:
     # Filter by character_id=3
     res_char = await client.get("/api/v1/stories?filter[character_id]=3")
     assert res_char.status_code == 200
-    assert len(res_char.json()["data"]) == 1
-    assert res_char.json()["data"][0]["title"] == "Campfire Encounter"
+    assert len(api_data(res_char)) == 1
+    assert api_data(res_char)[0]["title"] == "Campfire Encounter"
 
     # Filter by search text
     res_search = await client.get("/api/v1/stories?filter[q]=Battle")
     assert res_search.status_code == 200
-    assert len(res_search.json()["data"]) == 1
-    assert res_search.json()["data"][0]["title"] == "Battle of the East"
+    assert len(api_data(res_search)) == 1
+    assert api_data(res_search)[0]["title"] == "Battle of the East"
+
+
+async def test_update_and_delete_story(client: AsyncClient) -> None:
+    # 1. Create a story
+    create_res = await client.post(
+        "/api/v1/stories",
+        json={
+            "title": "Old Story Title",
+            "summary": "Old Summary",
+            "content": "Old Content",
+            "character_ids": [1],
+        },
+    )
+    assert create_res.status_code == 200
+    s_id = api_data(create_res)["id"]
+
+    # 2. Update it
+    patch_res = await client.patch(
+        f"/api/v1/stories/{s_id}",
+        json={
+            "title": "New Story Title",
+            "summary": "New Summary",
+            "content": "New Content",
+            "character_ids": [1, 2],
+        },
+    )
+    assert patch_res.status_code == 200
+    patched = api_data(patch_res)
+    assert patched["title"] == "New Story Title"
+    assert patched["summary"] == "New Summary"
+    assert set(patched["character_ids"]) == {1, 2}
+
+    # 3. Check detail
+    detail_res = await client.get(f"/api/v1/stories/{s_id}")
+    assert detail_res.status_code == 200
+    assert api_data(detail_res)["content"] == "New Content"
+
+    # 4. Delete it
+    del_res = await client.delete(f"/api/v1/stories/{s_id}")
+    assert del_res.status_code == 200
+
+    # 5. Check 404
+    get_after_del = await client.get(f"/api/v1/stories/{s_id}")
+    assert get_after_del.status_code == 404
+
+
+async def test_search_stories_inside_txt_content(client: AsyncClient) -> None:
+    create_res = await client.post(
+        "/api/v1/stories",
+        json={
+            "title": "A Quiet Evening",
+            "summary": "A calm chapter.",
+            "content": "The travelers entered the crystal library. Elias discovered an ancient map.",
+            "character_ids": [8],
+        },
+    )
+    assert create_res.status_code == 200
+
+    # Match words that occur only in the .txt body, not in title or summary.
+    search_res = await client.get("/api/v1/stories?filter[q]=ELIAS%20ancient")
+    assert search_res.status_code == 200
+    payload = api_body(search_res)
+    assert payload["meta"]["pagination"]["total"] == 1
+    assert len(payload["data"]) == 1
+    assert "Elias" in payload["data"][0]["search_excerpt"]
+
+    missing_res = await client.get("/api/v1/stories?filter[q]=nonexistentphrase")
+    assert missing_res.status_code == 200
+    assert api_body(missing_res)["meta"]["pagination"]["total"] == 0
